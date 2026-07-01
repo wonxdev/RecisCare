@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masuk RecisCare</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+  <div class="container">
+    <div class="card">
+      <img src="assets/logo.png" alt="RecisCare Logo" class="logo logo-large logo-center">
+      <h1>Masuk RecisCare</h1>
+      <p>Silakan masuk untuk melanjutkan.</p>
+
+      <label>Email Sekolah</label>
+      <input id="email" type="email" placeholder="nama@sekolah.sch.id">
+
+      <label>Kata Sandi</label>
+      <input id="password" type="password" placeholder="••••••••">
+
+      <button onclick="login()">Masuk</button>
+
+      <div style="text-align:center;">
+        <a href="register.html" class="text-link">Belum punya akun? Daftar</a>
+      </div>
+    </div>
+
+    <footer>RecisCare — Sistem Piket Sekolah</footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+  <script>
+    // Dark Mode
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+      const isDark = document.body.classList.contains('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateToggleButton();
+    }
+
+    function updateToggleButton() {
+      const btn = document.querySelector('.dark-mode-toggle');
+      if (document.body.classList.contains('dark')) {
+        btn.innerHTML = '☀️ Light Mode';
+      } else {
+        btn.innerHTML = '🌙 Dark Mode';
+      }
+    }
+
+    // Load theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+    }
+    updateToggleButton();
+
+    async function login() {
+      const btn = document.querySelector('button');
+      const originalText = btn.innerText;
+      btn.innerText = 'Memproses...';
+      btn.disabled = true;
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.value,
+          password: password.value
+        });
+
+        if (error) throw error;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        location.href = profile.role === 'student'
+          ? 'student.html'
+          : 'teacher.html';
+      } catch (err) {
+        alert('Gagal masuk: ' + err.message);
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+
+</html>

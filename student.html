@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecisCare — Siswa</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+  <!-- Notification Container -->
+  <div id="toast-container" class="notification-container"></div>
+
+  <div class="container">
+    <img src="assets/logo.png" alt="RecisCare Logo" class="logo logo-small">
+    <!-- Header / Stats -->
+    <div class="card" style="background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%); color: white; border:none;">
+      <h2 style="color:white; margin-bottom:8px;">Halo, <span id="userName">Siswa</span>!</h2>
+      <p style="color: #d1fae5; margin-bottom:16px;" id="userClass">...</p>
+
+      <div style="display:flex; gap:16px;">
+        <div style="background:rgba(255,255,255,0.2); padding:8px 16px; border-radius:12px; flex:1;">
+          <small style="display:block; opacity:0.8;">Jadwal Piket</small>
+          <div style="font-weight:700; font-size:1.1rem;" id="piketDay">...</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.2); padding:8px 16px; border-radius:12px; flex:1;">
+          <small style="display:block; opacity:0.8;">Peringatan</small>
+          <div style="font-weight:700; font-size:1.1rem;" id="warningCount">0/3</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Upload Bukti Piket</h3>
+      <span class="status-text">Pastikan foto terlihat jelas. Batas upload pukul 15.00 WIB.</span>
+
+      <div class="file-input-wrapper">
+        <button class="btn-upload" type="button">
+          <span style="font-size:32px">📷</span>
+          <span>Ambil Foto / Pilih File</span>
+        </button>
+        <input type="file" id="photo" accept="image/*" capture="environment" onchange="previewFile()">
+      </div>
+
+      <div id="preview" style="display:none; margin-top:16px;">
+        <p style="margin-bottom:8px; font-size:0.875rem;">File terpilih:</p>
+        <div style="font-weight:600;" id="filename"></div>
+        <img id="previewImg" style="width:100%; border-radius:12px; margin-top:8px; display:none;">
+      </div>
+
+      <button onclick="submit()">Kirim Bukti</button>
+    </div>
+
+    <h3>Riwayat & Jadwal</h3>
+    <div id="scheduleList">
+      <p style="text-align:center;">Memuat jadwal...</p>
+    </div>
+
+    <button class="secondary" onclick="logout()" style="margin-top:auto;">Keluar</button>
+
+    <footer>RecisCare — Sistem Piket Sekolah</footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+  <script>
+    // Dark Mode
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+      const isDark = document.body.classList.contains('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateToggleButton();
+    }
+
+    function updateToggleButton() {
+      const btn = document.querySelector('.dark-mode-toggle');
+      if (document.body.classList.contains('dark')) {
+        btn.innerHTML = '☀️ Light Mode';
+      } else {
+        btn.innerHTML = '🌙 Dark Mode';
+      }
+    }
+
+    // Load theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+    }
+    updateToggleButton();
+
+    // Check Auth
+    let user = null;
+    let profile = null;
+
+    async function init() {
+      // Get User
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) { location.href = 'index.html'; return; }
+      user = currentUser;
+
+      // Get Profile
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      profile = p;
+
+      // Set UI
+      document.getElementById('userName').innerText = user.email.split('@')[0];
+      document.getElementById('userClass').innerText = profile.class || 'Kelas Tidak Ada';
+      document.getElementById('piketDay').innerText = profile.piket_day || '-';
+
+      // Load Data
+      loadScheduleAndWarnings();
+      loadNotifications();
+    }
+
+    async function loadScheduleAndWarnings() {
+      // 1. Get Attendance History
+      const { data: history } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      // 2. Generate Dates (Past 4 weeks + Today)
+      // Simplified logic: Create a list of weeks where 'piket_day' occurs.
+      const dayMap = { 'Minggu': 0, 'Senin': 1, 'Selasa': 2, 'Rabu': 3, 'Kamis': 4, 'Jumat': 5, 'Sabtu': 6 };
+      const targetDay = dayMap[profile.piket_day];
+
+      if (targetDay === undefined) return;
+
+      const list = [];
+      const today = new Date();
+      let warnings = 0;
+
+      // Look back 4 weeks and include this week
+      for (let i = 0; i < 5; i++) {
+        // Calculate date for this week's iteration (going back)
+        let d = new Date();
+        d.setDate(d.getDate() - (i * 7)); // Move back weeks
+
+        // Adjust to target day of that week
+        const currentDay = d.getDay();
+        const diff = targetDay - currentDay;
+        d.setDate(d.getDate() + diff);
+
+        // Reset time for comparison
+        d.setHours(0, 0, 0, 0);
+
+        // Compare with Today
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        if (d > now) continue; // Don't show future weeks yet if calculated wrong (or show future?) 
+        // User said "Shows only student's piket dates". "Repeats weekly". 
+        // Let's show: Last 4 occurrences.
+
+        // Find status
+        // Check if an attendance record exists for this date matching our timezone logic
+        // Simple match: created_at date part = d date part
+        const match = history.find(h => {
+          const hDate = new Date(h.created_at);
+          return hDate.getDate() === d.getDate() &&
+            hDate.getMonth() === d.getMonth() &&
+            hDate.getFullYear() === d.getFullYear();
+        });
+
+        let status = 'missed';
+        if (match) {
+          status = match.status; // 'pending', 'present', 'absent'
+        } else {
+          if (d.getTime() === now.getTime()) {
+            status = 'upcoming'; // Today, haven't submitted yet
+          } else {
+            status = 'missed'; // Past date, no record
+          }
+        }
+
+        // If admin explicitly marked absent on a match, it counts as warning? 
+        // "Triggered ONLY by missed piket".
+        // "Missed" usually implies "No show". 
+        // If status is 'absent' (Rejected) -> Warning? Or just Missed?
+        // Let's count 'missed' (no submission) and 'absent' (rejected) as warnings.
+        if (status === 'missed' || status === 'absent') {
+          warnings++;
+        }
+
+        list.push({ date: d, status: status, match: match });
+      }
+
+      // Update warning UI
+      const warningEl = document.getElementById('warningCount');
+      warningEl.innerText = `${warnings}/3`;
+      if (warnings >= 3) warningEl.style.color = '#f87171'; // Red text
+
+      // Render List
+      const html = list.map(item => {
+        const dateStr = item.date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        let badgeClass = '';
+        let label = '';
+
+        switch (item.status) {
+          case 'present': badgeClass = 'present'; label = 'Hadir'; break;
+          case 'absent': badgeClass = 'absent'; label = 'Ditolak'; break;
+          case 'pending': badgeClass = 'pending'; label = 'Menunggu'; break;
+          case 'missed': badgeClass = 'missed'; label = 'Terlewat'; break;
+          case 'upcoming': badgeClass = 'pending'; label = 'Jadwal Hari Ini'; break;
+        }
+
+        return `
+                <div class="card" style="padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:600;">${dateStr}</div>
+                         ${item.match && item.match.note ? `<small style="color:var(--danger-text)">Output Guru: ${item.match.note}</small>` : ''}
+                    </div>
+                    <span class="badge ${badgeClass}">${label}</span>
+                </div>`;
+      }).join('');
+
+      document.getElementById('scheduleList').innerHTML = html;
+    }
+
+    async function loadNotifications() {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_read', false)
+        .order('created_at', { ascending: false });
+
+      if (data && data.length > 0) {
+        const container = document.getElementById('toast-container');
+        data.forEach(n => {
+          const div = document.createElement('div');
+          div.className = 'notification-toast';
+          div.innerHTML = `
+                     <span>${n.message}</span>
+                     <button class="close-toast" onclick="dismiss('${n.id}', this)">×</button>
+                   `;
+          container.appendChild(div);
+        });
+      }
+    }
+
+    async function dismiss(id, btn) {
+      btn.parentElement.remove();
+      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    }
+
+    async function submit() {
+      if (!photo.files[0]) return alert("Pilih foto terlebih dahulu!");
+
+      const btn = document.querySelector('button[onclick="submit()"]');
+      btn.innerText = 'Mengirim...';
+      btn.disabled = true;
+
+      try {
+        const file = photo.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
+
+        // Upload
+        const { error: uploadError } = await supabase.storage
+          .from('attendance-photos')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from('attendance-photos')
+          .getPublicUrl(filePath);
+
+        // Insert
+        const { error: dbError } = await supabase.from('attendance').insert({
+          user_id: user.id,
+          photo_url: data.publicUrl,
+          status: 'pending'
+        });
+
+        if (dbError) throw dbError;
+
+        alert("Laporan piket berhasil dikirim!");
+        location.reload();
+
+      } catch (err) {
+        alert("Gagal mengirim: " + err.message);
+        btn.innerText = 'Kirim Bukti';
+        btn.disabled = false;
+      }
+    }
+
+    function previewFile() {
+      const file = photo.files[0];
+      if (file) {
+        document.getElementById('preview').style.display = 'block';
+        document.getElementById('filename').innerText = file.name;
+        const img = document.getElementById('previewImg');
+        img.style.display = 'block';
+        img.src = URL.createObjectURL(file);
+      }
+    }
+
+    async function logout() {
+      await supabase.auth.signOut();
+      location.href = 'index.html';
+    }
+
+    init();
+  </script>
+</body>
+
+</html>

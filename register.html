@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daftar RecisCare</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <img src="assets/logo.png" alt="RecisCare Logo" class="logo logo-large logo-center">
+      <h1>Daftar Akun</h1>
+      <p>Buat akun baru untuk siswa.</p>
+
+      <label>Email</label>
+      <input id="email" type="email" placeholder="nama@email.com">
+
+      <label>Kata Sandi</label>
+      <input id="password" type="password" placeholder="••••••••">
+
+      <label>Kelas</label>
+      <select id="kelas">
+        <option value="" disabled selected>Pilih Kelas</option>
+        <option value="XII A">XII A</option>
+        <option value="XII B">XII B</option>
+        <option value="XII C">XII C</option>
+        <option value="XII D">XII D</option>
+        <option value="XII E">XII E</option>
+        <option value="XII F">XII F</option>
+        <option value="XII G">XII G</option>
+        <option value="XII H">XII H</option>
+        <option value="XII I">XII I</option>
+        <option value="XII J">XII J</option>
+      </select>
+
+      <label>Hari Piket</label>
+      <select id="piketDay">
+        <option value="" disabled selected>Pilih Hari</option>
+        <option value="Senin">Senin</option>
+        <option value="Selasa">Selasa</option>
+        <option value="Rabu">Rabu</option>
+        <option value="Kamis">Kamis</option>
+        <option value="Jumat">Jumat</option>
+      </select>
+
+      <button onclick="register()">Daftar Sekarang</button>
+
+      <div style="text-align:center;">
+        <a href="index.html" class="text-link">Sudah punya akun? Masuk</a>
+      </div>
+    </div>
+
+    <footer>RecisCare — Sistem Piket Sekolah</footer>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+  <script>
+    // Dark Mode
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+      const isDark = document.body.classList.contains('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateToggleButton();
+    }
+
+    function updateToggleButton() {
+      const btn = document.querySelector('.dark-mode-toggle');
+      if (document.body.classList.contains('dark')) {
+        btn.innerHTML = '☀️ Light Mode';
+      } else {
+        btn.innerHTML = '🌙 Dark Mode';
+      }
+    }
+
+    // Load theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+    }
+    updateToggleButton();
+
+    async function register() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const kelas = document.getElementById('kelas').value;
+      const piketDay = document.getElementById('piketDay').value;
+
+      if (!email || !password || !kelas || !piketDay) {
+        return alert("Semua kolom wajib diisi!");
+      }
+
+      const btn = document.querySelector('button');
+      const originalText = btn.innerText;
+      btn.innerText = 'Memproses...';
+      btn.disabled = true;
+
+      try {
+        // 1. Sign Up
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              class: kelas,
+              piket_day: piketDay,
+              role: 'student'
+            }
+          }
+        });
+
+        if (authError) throw authError;
+
+        if (authData.user) {
+          // 2. Insert into profiles (Manual insert to be safe, assuming no trigger)
+          // Note: If a trigger exists, this might fail or duplicate. 
+          // We use upsert to be safe.
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: authData.user.id,
+              role: 'student',
+              class: kelas,
+              piket_day: piketDay
+            });
+
+          if (profileError) {
+            console.error("Profile creation failed:", profileError);
+            // Continue anyway as auth succeeded, user might need to contact admin or we handle it
+          }
+
+          alert("Pendaftaran berhasil! Silakan masuk.");
+          window.location.href = 'index.html';
+        }
+
+      } catch (err) {
+        alert("Gagal daftar: " + err.message);
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+
+</html>
