@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecisCare — Guru</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+  <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+  <div class="container">
+    <img src="../assets/logo.png" alt="RecisCare Logo" class="logo logo-small">
+    <div class="card" style="margin-bottom:12px;">
+      <h2 style="margin-bottom:4px;" id="pageTitle">Dashboard</h2>
+      <p id="pageSubtitle" style="margin-bottom:16px;">Memuat akses demo...</p>
+      <div style="display:flex; gap:12px;">
+        <select id="dayFilter" onchange="load()" style="margin-bottom:0; flex:2;">
+          <option value="all">Semua Hari</option>
+          <option value="Senin">Senin</option>
+          <option value="Selasa">Selasa</option>
+          <option value="Rabu">Rabu</option>
+          <option value="Kamis">Kamis</option>
+          <option value="Jumat">Jumat</option>
+        </select>
+        <button class="secondary" onclick="exportCsv()" style="margin-top:0; flex:1; padding:10px;">⬇ CSV</button>
+      </div>
+    </div>
+
+    <div id="rolePanel"></div>
+    <div id="list">
+      <div style="text-align:center; color:var(--text-muted); margin-top:40px;">Memuat data...</div>
+    </div>
+
+    <button class="secondary" onclick="logoutPage()" style="margin-top:auto;">Keluar Akun</button>
+    <footer>RecisCare — Sistem Piket Sekolah</footer>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+      const isDark = document.body.classList.contains('dark');
+      database.settings.setTheme(isDark ? 'dark' : 'light');
+      updateToggleButton();
+    }
+
+    function updateToggleButton() {
+      const btn = document.querySelector('.dark-mode-toggle');
+      if (document.body.classList.contains('dark')) {
+        btn.innerHTML = '☀️ Light Mode';
+      } else {
+        btn.innerHTML = '🌙 Dark Mode';
+      }
+    }
+
+    let cachedData = [];
+    let currentUser = null;
+    let editingUserId = null;
+    let editingAssignmentId = null;
+
+    function ensureAccess() {
+      const user = window.checkAuth('teacher');
+      if (user) {
+        currentUser = user;
+      }
+      return user;
+    }
+
+    function load() {
+      const user = ensureAccess();
+      if (!user) return;
+      document.getElementById('pageTitle').innerText = user.role === 'admin' ? 'Dashboard Admin' : user.role === 'classleader' ? 'Dashboard Ketua Kelas' : 'Dashboard Guru';
+      document.getElementById('pageSubtitle').innerText = user.role === 'admin' ? 'Kelola pengguna dan pantau semua demo data.' : user.role === 'classleader' ? 'Pantau status piket kelas Anda hari ini.' : 'Verifikasi laporan piket harian dan kelola tugas.';
+      renderRolePanel();
+      renderAttendance();
+    }
+
+    function renderRolePanel() {
+      const role = currentUser.role;
+      if (role === 'classleader') {
+        const duties = database.schedule.getToday(currentUser.class);
+        const count = database.attendance.getAll().filter((entry) => {
+          const student = database.users.get(entry.user_id);
+          return student && student.class === currentUser.class;
+        }).length;
+        document.getElementById('rolePanel').innerHTML = `<div class="card"><h3>Status Piket Hari Ini</h3><p>Jumlah laporan masuk untuk ${currentUser.class}: ${count}</p>${duties.map((item) => `<div style="margin-top:8px; padding:8px 12px; background:var(--bg-body); border-radius:8px;">${item.duty} • ${item.time}</div>`).join('')}</div>`;
+      } else if (role === 'admin') {
+        document.getElementById('rolePanel').innerHTML = `<div class="card"><h3>Kelola Pengguna</h3><label>Nama</label><input id="userName" placeholder="Nama pengguna"><label>Email</label><input id="userEmail" placeholder="Email"><label>Role</label><select id="userRole"><option value="student">Student</option><option value="teacher">Teacher</option><option value="classleader">Class Leader</option><option value="admin">Admin</option></select><label>Kelas</label><input id="userClass" placeholder="XII B"><label>Hari Piket</label><input id="userPiketDay" placeholder="Kamis"><button onclick="createUser()">${editingUserId ? 'Perbarui Pengguna' : 'Tambah Pengguna'}</button><div id="userList"></div></div>`;
+        renderUsers();
+      } else {
+        document.getElementById('rolePanel').innerHTML = `<div class="card"><h3>${editingAssignmentId ? 'Edit Tugas' : 'Tambah Tugas'}</h3><label>Judul</label><input id="assignmentTitle" placeholder="Judul tugas"><label>Mapel</label><input id="assignmentSubject" placeholder="Nama mapel"><label>Deskripsi</label><textarea id="assignmentDescription" rows="3"></textarea><label>Target Kelas</label><input id="assignmentClass" placeholder="XII B"><label>Prioritas</label><select id="assignmentPriority"><option value="low">Rendah</option><option value="medium" selected>Sedang</option><option value="high">Tinggi</option></select><label>Tenggat</label><input id="assignmentDue" type="date"><button onclick="createAssignment()">${editingAssignmentId ? 'Perbarui Tugas' : 'Simpan Tugas'}</button></div>`;
+      }
+    }
+
+    function renderUsers() {
+      const users = database.users.getAll();
+      document.getElementById('userList').innerHTML = users.map((user) => `<div class="card" style="padding:16px; margin-bottom:8px;"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-weight:700;">${user.name || user.email}</div><small style="color:var(--text-muted);">${user.role} • ${user.class || '-'}</small></div><div class="actions"><button class="secondary" onclick="editUser('${user.id}')">Edit</button><button class="secondary" onclick="deleteUser('${user.id}')">Hapus</button></div></div></div>`).join('');
+    }
+
+    function editUser(id) {
+      const user = database.users.get(id);
+      if (!user) return;
+      editingUserId = id;
+      document.getElementById('userName').value = user.name || '';
+      document.getElementById('userEmail').value = user.email || '';
+      document.getElementById('userRole').value = user.role || 'student';
+      document.getElementById('userClass').value = user.class || '';
+      document.getElementById('userPiketDay').value = user.piket_day || '';
+      renderUsers();
+    }
+
+    function createUser() {
+      const name = document.getElementById('userName').value;
+      const email = document.getElementById('userEmail').value;
+      const role = document.getElementById('userRole').value;
+      const className = document.getElementById('userClass').value;
+      const piketDay = document.getElementById('userPiketDay').value;
+      if (!name || !email || !role) return alert('Isi nama, email, dan role');
+      if (editingUserId) {
+        database.users.update(editingUserId, { name, email, role, class: className, piket_day: piketDay });
+        alert('Pengguna berhasil diperbarui');
+      } else {
+        database.users.create({ name, email, role, class: className, piket_day: piketDay, password: 'demo123', moving_subjects: [] });
+        alert('Pengguna berhasil ditambahkan');
+      }
+      editingUserId = null;
+      renderUsers();
+      renderRolePanel();
+    }
+
+    function deleteUser(id) {
+      database.users.delete(id);
+      renderUsers();
+    }
+
+    function renderAttendance() {
+      const dayFilter = document.getElementById('dayFilter').value;
+      const attendanceData = database.attendance.getAll();
+      const userMap = Object.fromEntries(database.users.getAll().map((user) => [user.id, user]));
+      let merged = attendanceData.map((entry) => ({ ...entry, profile: userMap[entry.user_id] || {} }));
+      if (dayFilter !== 'all') {
+        merged = merged.filter((item) => item.profile.piket_day === dayFilter);
+      }
+      cachedData = merged;
+
+      const attendanceHtml = merged.length === 0
+        ? '<div style="text-align:center;">Tidak ada data untuk filter ini.</div>'
+        : merged.map((entry) => {
+            const date = new Date(entry.created_at);
+            const timeStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            let statusBadge = '<span class="badge pending">Menunggu</span>';
+            if (entry.status === 'present') statusBadge = '<span class="badge present">Hadir</span>';
+            else if (entry.status === 'absent') statusBadge = '<span class="badge absent">Ditolak</span>';
+            return `<div class="card"><div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;"><div><div style="font-weight:700; font-size:1.1rem;">${entry.profile.name || entry.profile.email || 'Siswa'}</div><small style="color:var(--text-muted);">${entry.profile.class || '-'} • ${dateStr} ${timeStr}</small></div>${statusBadge}</div><div style="margin-bottom:12px; background:#f8fafc; padding:8px; border-radius:8px;"><small style="display:block; color:var(--text-muted);">Bukti Dukung:</small><span style="color:var(--primary); font-weight:500;">${entry.photo_name || 'Tidak ada'}</span></div><div style="margin-bottom:12px;"><label style="margin-top:0;">Catatan Guru</label><input type="text" id="note_${entry.id}" value="${entry.note || ''}" placeholder="Beri feedback..."></div><div class="actions"><button class="success" onclick="updateStatus('${entry.id}', 'present')">Terima</button><button class="danger" onclick="updateStatus('${entry.id}', 'absent')">Tolak</button></div></div>`;
+          }).join('');
+
+      const assignmentHtml = renderAssignments();
+      document.getElementById('list').innerHTML = `${attendanceHtml}${assignmentHtml}`;
+    }
+
+    function renderAssignments() {
+      const allAssignments = currentUser.role === 'teacher' ? database.assignments.getForTeacher(currentUser.id) : currentUser.role === 'admin' ? database.assignments.getAll() : [];
+      const html = allAssignments.map((assignment) => `<div class="card" style="padding:16px; margin-bottom:12px;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><div style="font-weight:700;">${assignment.title}</div><small style="color:var(--text-muted);">${assignment.subject} • ${assignment.target_class}</small></div><span class="badge pending">${assignment.priority}</span></div><p>${assignment.description}</p>${currentUser.role === 'teacher' || currentUser.role === 'admin' ? `<div class="actions"><button class="secondary" onclick="editAssignment('${assignment.id}')">Edit</button><button class="secondary" onclick="deleteAssignment('${assignment.id}')">Hapus</button></div>` : ''}</div>`).join('');
+      return html || '<div class="card" style="text-align:center; color:var(--text-muted);">Tidak ada tugas untuk dashboard ini.</div>';
+    }
+
+    function editAssignment(id) {
+      const assignment = database.assignments.get(id);
+      if (!assignment) return;
+      editingAssignmentId = id;
+      document.getElementById('assignmentTitle').value = assignment.title || '';
+      document.getElementById('assignmentSubject').value = assignment.subject || '';
+      document.getElementById('assignmentDescription').value = assignment.description || '';
+      document.getElementById('assignmentClass').value = assignment.target_class || '';
+      document.getElementById('assignmentPriority').value = assignment.priority || 'medium';
+      document.getElementById('assignmentDue').value = assignment.due_date ? assignment.due_date.slice(0, 10) : '';
+      renderRolePanel();
+    }
+
+    function createAssignment() {
+      const title = document.getElementById('assignmentTitle').value;
+      const subject = document.getElementById('assignmentSubject').value;
+      const description = document.getElementById('assignmentDescription').value;
+      const targetClass = document.getElementById('assignmentClass').value;
+      const priority = document.getElementById('assignmentPriority').value;
+      const dueDate = document.getElementById('assignmentDue').value;
+      if (!title || !subject || !description || !targetClass || !dueDate) return alert('Isi semua kolom tugas');
+      if (editingAssignmentId) {
+        database.assignments.update(editingAssignmentId, { title, subject, description, target_class: targetClass, priority, due_date: new Date(dueDate).toISOString() });
+        alert('Tugas berhasil diperbarui');
+      } else {
+        database.assignments.create({ title, subject, description, target_class: targetClass, priority, due_date: new Date(dueDate).toISOString(), created_by: currentUser.id });
+        alert('Tugas berhasil dibuat');
+      }
+      editingAssignmentId = null;
+      load();
+    }
+
+    function updateStatus(id, status) {
+      const note = document.getElementById(`note_${id}`).value;
+      database.attendance.update(id, { status, note });
+      load();
+    }
+
+    function deleteAssignment(id) {
+      database.assignments.delete(id);
+      load();
+    }
+
+    function exportCsv() {
+      if (cachedData.length === 0) return alert('Belum ada data!');
+      const rows = cachedData.map((entry) => ({ Tanggal: entry.created_at, Kelas: entry.profile.class, HariPiket: entry.profile.piket_day, Status: entry.status, Catatan: entry.note, Foto: entry.photo_name }));
+      const csv = ['Tanggal,Kelas,HariPiket,Status,Catatan,Foto', ...rows.map((row) => Object.values(row).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'RecisCare_Laporan.csv';
+      link.click();
+    }
+
+    function logoutPage() {
+      logout();
+    }
+
+    applyTheme();
+    load();
+  </script>
+</body>
+
+</html>
