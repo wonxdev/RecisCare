@@ -33,5 +33,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Photo-evidence submission workflow with pending / accepted / rejected review states.
 - CSV export of attendance records.
 - Dark mode with persisted preference.
-- Offline-first `localStorage` persistence layer (`app.js`).
+- Supabase for authentication, database, and photo storage.
 - PWA manifest for installable/offline experience.

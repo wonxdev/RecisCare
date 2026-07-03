@@ -416,3 +416,17 @@ footer {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
+
+/* Portfolio Demo badge */
+.demo-badge {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  text-align: center;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border-bottom: 1px solid var(--warning);
+}

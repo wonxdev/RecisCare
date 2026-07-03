@@ -1,118 +1,185 @@
-# RecisCare — Sistem Piket Sekolah
+# RecisCare - Portfolio Demo
+A web-based school duty (piket) attendance system developed as a Senior High School Informatics project. RecisCare helps students, teachers, class leaders, and administrators manage daily duty schedules, attendance submissions, and review processes through a centralized application.
+> **Portfolio Version:** This repository contains a frontend-only demonstration that runs entirely in the browser using LocalStorage. The original project was built with Supabase for authentication and database services.
 
-🧪 **Portfolio Demo** — a frontend-only, offline-first rebuild of a school duty (piket) attendance system. All data lives in your browser's `localStorage`; there is no backend, no server, and no real user data involved.
+---
 
 ## Overview
+Managing school duty attendance manually often requires teachers to collect photo evidence through messaging applications, verify submissions one by one, and record attendance separately. Students also have limited visibility into submission status and teacher feedback.
 
-RecisCare is a role-based web app for managing student "piket" (duty) attendance at a school: students submit photo evidence of completed duties, teachers review and approve or reject submissions, class leaders monitor their class's status, and administrators manage accounts across the system.
+RecisCare was developed to centralize the entire duty attendance process. Students submit photo evidence of completed duties, teachers review submissions, class leaders monitor attendance within their classes, and administrators manage users and system data.
 
-This version has been refactored into a pure static site so it can be explored instantly, hosted for free on GitHub Pages, and read end-to-end as a self-contained portfolio piece.
+For portfolio purposes, the original Supabase backend has been replaced with a LocalStorage-powered demo that preserves the original application workflow without requiring any external services.
 
-## Portfolio Demo Notice
-
-- This is a **demonstration build**, not a production system.
-- All data is fictional and generated locally — no real students, teachers, or schools are represented.
-- There is no backend: everything runs client-side and persists via `localStorage` in your browser only.
-- Login is simulated. Passwords are plain demo strings, visible in [`DEMO_ACCOUNTS.md`](DEMO_ACCOUNTS.md), and exist purely to let you explore each role.
-- Data you create (new users, submissions, reviews) stays on your device and can be wiped anytime with the **Reset Data Demo** option.
+---
 
 ## Features
+* Demo login with four roles
 
-**Student**
-- Upload photo evidence of completed duty with automatic timestamps
-- View personal duty schedule and submission history
-- Track submission status (pending / accepted / rejected) with teacher feedback
+  * Administrator
+  * Teacher
+  * Class Leader
+  * Student
+* Duty attendance submission
+* Teacher approval and rejection workflow
+* Submission history and status tracking
+* Class duty schedule monitoring
+* User management
+* Role-based interface
+* Persistent demo database using LocalStorage
+* Resettable demo environment
 
-**Teacher**
-- Review pending submissions and accept or reject with a feedback note
-- Filter submissions by day
-- Export all attendance records to CSV
+---
 
-**Class Leader**
-- View today's duty schedule for their class
-- See a live count of submissions for their class
+## Demo Roles
+| Role              | Capabilities                                               |
+| ----------------- | ---------------------------------------------------------- |
+| **Administrator** | Manage users, roles, and system data                       |
+| **Teacher**       | Review, approve, reject, and export attendance submissions |
+| **Class Leader**  | Monitor class duty schedules and submission progress       |
+| **Student**       | Submit duty evidence and monitor submission status         |
 
-**Administrator**
-- Full user management (create, edit, delete accounts)
-- Assign roles and classes
-- Access all teacher-level review and reporting tools
-
-**Shared**
-- Dark mode with persisted preference
-- Responsive layout for mobile and desktop
-- One-click demo login per role — no registration required
+---
 
 ## Tech Stack
+### Frontend
+* HTML5
+* CSS3
+* Vanilla JavaScript
 
-- **HTML5 / CSS3 / Vanilla JavaScript** — no frameworks, no build step
-- **`localStorage`** — acts as the entire persistence layer via a small `DemoStore` module
-- **Static hosting** — deployable as-is to GitHub Pages or any static file host
+### Demo Data Layer
+* Browser LocalStorage
+* Custom JavaScript data abstraction (`DemoStore`)
 
-## Demo Mode
+### Original Backend (Archived)
+* Supabase Authentication
+* PostgreSQL
+* Row Level Security (RLS)
 
-Instead of a real backend, RecisCare uses `DemoStore`, a small JavaScript module ([`assets/js/demo-store.js`](assets/js/demo-store.js)) that mimics the shape of a typical backend client (`getAll`, `get`, `create`, `update`, `delete`) but reads and writes to `localStorage`.
+---
 
-- Seed data — fictional users, schedules, and attendance records — lives in [`demo/demo-data.js`](demo/demo-data.js) and loads automatically the first time the app runs.
-- All UI code talks to `DemoStore` only; nothing calls an external API.
-- Data persists across page reloads in the same browser, and resets cleanly via the **Reset Data Demo** link on the login page.
-
-See [`DEMO_ACCOUNTS.md`](DEMO_ACCOUNTS.md) for ready-to-use demo accounts and a suggested walkthrough.
-
-## Folder Structure
-
+## Demo Architecture
+```text
+Browser
+│
+├── LocalStorage
+│   ├── users
+│   ├── schedules
+│   ├── submissions
+│   └── sessions
+│
+└── RecisCare
+    ├── Administrator
+    ├── Teacher
+    ├── Class Leader
+    └── Student
 ```
-RecisCare/
-├── index.html                 # Login / role-selection screen (entry point)
-├── pages/
-│   ├── student.html           # Student dashboard
-│   ├── teacher.html           # Teacher / class leader / admin dashboard
-│   └── register.html          # Registration placeholder (disabled in demo)
+
+---
+
+## Original Architecture
+```text
+Users
+│
+├── Students
+├── Teachers
+├── Class Leaders
+└── Administrators
+        │
+        ▼
+RecisCare
+        │
+        ▼
+Supabase
+├── Authentication
+├── PostgreSQL
+└── Row Level Security
+        │
+        ▼
+Database
+├── users
+├── schedules
+├── submissions
+└── classes
+```
+
+---
+
+## Project Structure
+```text
+.
 ├── assets/
 │   ├── css/
-│   │   └── style.css          # Shared styling, theme variables, dark mode
 │   ├── js/
-│   │   └── demo-store.js      # LocalStorage data layer + auth/session helpers
 │   └── logo.png
 ├── demo/
-│   └── demo-data.js           # Fictional seed data (users, schedule, attendance)
+│   └── demo-data.js
+├── pages/
+│   ├── student.html
+│   ├── teacher.html
+│   └── register.html
 ├── public/
-│   └── manifest.json          # PWA manifest
-├── DEMO_ACCOUNTS.md            # Demo credentials and walkthrough
+│   └── manifest.json
+├── index.html
+├── DEMO_ACCOUNTS.md
 ├── README.md
 └── LICENSE
 ```
 
-## How to Run
+---
 
-No installation, build tools, or dependencies required.
+## Running the Project
+1. Clone the repository.
+```bash
+git clone https://github.com/YOUR_USERNAME/reciscare.git
+```
+2. Open the project folder.
+3. Launch `index.html` using **Live Server** (recommended).
+No installation, backend, or environment variables are required.
 
-1. Download or clone this repository.
-2. Open `index.html` directly in a modern browser, **or** serve the folder with any static file server (e.g. `npx serve .`).
-3. Pick a role on the login screen and click **Lanjutkan** to enter the demo.
+---
 
-To deploy on GitHub Pages: push the repo and enable Pages on the `main` branch, root folder — `index.html` at the repo root is already the entry point.
+## Demo Workflow
+1. Open the application.
+2. Select one of the demo roles.
+3. Explore the application.
+4. All changes are stored locally in your browser.
+5. Reset the demo database at any time to restore the initial dataset.
 
-## Limitations
+---
 
-- No real authentication or authorization — this is a client-side simulation only.
-- No encryption; demo passwords are stored in plain text in localStorage.
-- Uploaded "photo evidence" only stores the file name, not the actual image, since there's no server or storage bucket to hold it.
-- Data is local to a single browser and device — nothing syncs between users or sessions.
-- Not intended, and not hardened, for production or real institutional use.
+## Original Database
+The original implementation used several primary tables.
+| Table         | Purpose                             |
+| ------------- | ----------------------------------- |
+| `users`       | User profiles and roles             |
+| `schedules`   | School duty schedules               |
+| `submissions` | Student duty attendance submissions |
+| `classes`     | Class information                   |
 
-## Future Improvements
+The portfolio version replaces these tables with LocalStorage while preserving the application's original workflow.
 
-- Optional real backend (e.g. Supabase/Firebase) as a swap-in replacement for `DemoStore`, keeping the same method signatures.
-- Actual image upload/preview persistence rather than filename-only storage.
-- Notifications for students when a submission is reviewed.
-- Multi-language support (currently Indonesian-first UI).
+---
+
+## Learning Outcomes
+This project provided experience with:
+* Designing a complete web application
+* Building responsive user interfaces
+* Structuring JavaScript applications
+* Designing relational database schemas
+* Implementing role-based authorization
+* Working with Supabase
+* Building LocalStorage-powered frontend demonstrations
+* Converting a backend application into a standalone portfolio project
+
+---
 
 ## Project Status
+This project is archived as a completed Senior High School project.
 
-Feature-complete as a portfolio demo. No further backend work is planned; future changes would focus on UI polish or optional enhancements listed above.
+The original backend has been retired. This repository now serves as a self-contained portfolio demonstration that reproduces the application's core functionality without requiring external infrastructure.
+
+---
 
 ## License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
-Copyright (c) 2026 WONxDEV
+This project is available for educational and portfolio purposes.
