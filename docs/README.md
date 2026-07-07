@@ -110,7 +110,11 @@ Database
 .
 ├── assets/
 │   ├── css/
+│   │   └── style.css        # Centralized design system
 │   ├── js/
+│   │   ├── app.js           # Shared UI utilities (toast, modal, banner)
+│   │   ├── demo-store.js    # LocalStorage data layer
+│   │   └── pages/           # Per-page logic (login, student, teacher)
 │   └── logo.png
 ├── demo/
 │   └── demo-data.js

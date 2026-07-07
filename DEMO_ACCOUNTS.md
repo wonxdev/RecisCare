@@ -19,7 +19,7 @@ The fastest way in: open `index.html`, pick a role from the dropdown, and click 
 3. **Log out, log in as Student A again** → refresh and confirm the updated status and note appear in the history list.
 4. **Log in as Administrator** → create/edit/delete a user from the *Kelola Pengguna* panel.
 5. **Log in as Class Leader** → view today's duty schedule and submission count for XII B.
-6. **As Teacher/Admin**, use the **⬇ CSV** button to export attendance records.
+6. **As Teacher/Admin**, use the **Export CSV** button to export attendance records.
 
 ## Resetting Data
 

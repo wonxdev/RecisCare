@@ -9,28 +9,25 @@
  * @module demo-store
  * @requires demo/demo-data.js — must be loaded first, provides window.DEMO_SEED
  *
- * @global DemoStore   - Main data API object exposed to window
+ * @global DemoStore    - Main data API object exposed to window
  * @global checkAuth    - Route-guard helper
  * @global enterDemo    - One-click demo role login
- * @global loginUser     - Email/password login against seed accounts
- * @global logout        - Session termination
- * @global registerUser  - Disabled in demo mode
- * @global applyTheme    - Restores saved dark/light preference
- * @global resetDemo     - Wipes and reseeds all demo data
+ * @global loginUser    - Email/password login against seed accounts
+ * @global logout       - Session termination
+ * @global registerUser - Disabled in demo mode
+ * @global resetDemo    - Wipes and reseeds all demo data
  * @global formatDate / formatTime - Locale-aware formatting helpers
  *
  * Storage Keys:
  * - reciscare-demo-db: main JSON "database"
  * - reciscare-demo-role: active session role
  * - reciscare-demo-user: active session user id
- * - reciscare-demo-theme: saved theme preference
  */
 
 (() => {
   const STORAGE_KEY = 'reciscare-demo-db';
   const ACTIVE_ROLE_KEY = 'reciscare-demo-role';
   const ACTIVE_USER_KEY = 'reciscare-demo-user';
-  const THEME_KEY = 'reciscare-demo-theme';
   const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
   // ============================================================================
@@ -42,6 +39,7 @@
   }
 
   function clone(value) {
+    if (value === undefined) return undefined;
     return JSON.parse(JSON.stringify(value));
   }
 
@@ -51,6 +49,12 @@
 
   function formatTime(value) {
     return new Date(value).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /** Resolve a root-relative path (e.g. 'pages/student.html') from any page. */
+  function fromRoot(target) {
+    const prefix = window.location.pathname.includes('/pages/') ? '../' : '';
+    return prefix + target;
   }
 
   // ============================================================================
@@ -184,15 +188,6 @@
       }
     },
 
-    settings: {
-      getTheme() {
-        return localStorage.getItem(THEME_KEY) || 'light';
-      },
-      setTheme(theme) {
-        localStorage.setItem(THEME_KEY, theme);
-      }
-    },
-
     /**
      * Wipe all demo data and session state, then reseed from demo-data.js.
      * @returns {object} Fresh seeded database
@@ -201,7 +196,6 @@
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(ACTIVE_ROLE_KEY);
       localStorage.removeItem(ACTIVE_USER_KEY);
-      localStorage.removeItem(THEME_KEY);
       return readStore();
     }
   };
@@ -225,7 +219,7 @@
     const userId = roleMap[role];
     if (!userId) return false;
     DemoStore.auth.setActiveUser(userId, role);
-    window.location.href = role === 'student' ? '../pages/student.html' : '../pages/teacher.html';
+    window.location.href = fromRoot(role === 'student' ? 'pages/student.html' : 'pages/teacher.html');
     return true;
   };
 
@@ -241,7 +235,7 @@
   /** Clears the session and returns to the login screen. */
   window.logout = function () {
     DemoStore.auth.clearActiveUser();
-    window.location.href = '../index.html';
+    window.location.href = fromRoot('index.html');
   };
 
   /** Registration is intentionally disabled for this portfolio demo. */
@@ -256,33 +250,22 @@
   window.checkAuth = function (requiredRole) {
     const active = DemoStore.auth.getActiveUser();
     if (!active) {
-      window.location.href = '../index.html';
+      window.location.href = fromRoot('index.html');
       return null;
     }
     if (requiredRole === 'teacher' && ['teacher', 'classleader', 'admin'].includes(active.role)) {
       return active;
     }
     if (requiredRole && active.role !== requiredRole) {
-      window.location.href = active.role === 'student' ? '../pages/student.html' : '../pages/teacher.html';
+      window.location.href = fromRoot(active.role === 'student' ? 'pages/student.html' : 'pages/teacher.html');
       return null;
     }
     return active;
   };
 
-  /** Applies the saved theme preference on page load. */
-  window.applyTheme = function () {
-    const theme = DemoStore.settings.getTheme();
-    document.body.classList.toggle('dark', theme === 'dark');
-    const button = document.querySelector('.dark-mode-toggle');
-    if (button) {
-      button.innerHTML = document.body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
-    }
-  };
-
-  /** Wipes and reseeds demo data, then reloads the current page. */
+  /** Wipes and reseeds demo data, then returns to the login screen. */
   window.resetDemo = function () {
-    if (!window.confirm('Reset semua data demo ke kondisi awal?')) return;
     DemoStore.reset();
-    window.location.href = window.location.pathname.includes('/pages/') ? '../index.html' : 'index.html';
+    window.location.href = fromRoot('index.html');
   };
 })();

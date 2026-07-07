@@ -4,173 +4,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0e1116">
   <title>RecisCare — Siswa</title>
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 
 <body>
-  <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
-  <div id="toast-container" class="notification-container"></div>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="../index.html" class="navbar-brand">
+        <img src="../assets/logo.png" alt="RecisCare Logo">
+        <span>RecisCare</span>
+      </a>
+      <div class="navbar-actions">
+        <span class="navbar-user" id="navUser"></span>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Keluar</button>
+      </div>
+    </div>
+  </nav>
 
-  <div class="container">
-    <img src="../assets/logo.png" alt="RecisCare Logo" class="logo logo-small">
-    <div class="card" style="background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%); color: white; border:none;">
-      <h2 style="color:white; margin-bottom:8px;">Halo, <span id="userName">Siswa</span>!</h2>
-      <p style="color: #d1fae5; margin-bottom:16px;" id="userClass">...</p>
+  <main class="container">
+    <header class="page-header">
+      <h1>Halo, <span id="userName">Siswa</span></h1>
+      <p id="userClass">...</p>
+    </header>
 
-      <div style="display:flex; gap:16px;">
-        <div style="background:rgba(255,255,255,0.2); padding:8px 16px; border-radius:12px; flex:1;">
-          <small style="display:block; opacity:0.8;">Jadwal Piket</small>
-          <div style="font-weight:700; font-size:1.1rem;" id="piketDay">...</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.2); padding:8px 16px; border-radius:12px; flex:1;">
-          <small style="display:block; opacity:0.8;">Peringatan</small>
-          <div style="font-weight:700; font-size:1.1rem;" id="warningCount">0/3</div>
-        </div>
+    <div class="stat-grid">
+      <div class="stat">
+        <span class="stat-label">Jadwal Piket</span>
+        <div class="stat-value" id="piketDay">...</div>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Peringatan</span>
+        <div class="stat-value" id="warningCount">0/3</div>
       </div>
     </div>
 
     <div class="card">
       <h3>Upload Bukti Piket</h3>
-      <span class="status-text">Pastikan foto terlihat jelas. Bukti disimpan lokal dalam demo.</span>
+      <span class="card-hint">Pastikan foto terlihat jelas. Bukti disimpan lokal dalam demo.</span>
 
-      <div class="file-input-wrapper">
-        <button class="btn-upload" type="button">
-          <span style="font-size:32px">📷</span>
-          <span>Ambil Foto / Pilih File</span>
-        </button>
-        <input type="file" id="photo" accept="image/*" capture="environment" onchange="previewFile()">
+      <div class="dropzone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+          <circle cx="12" cy="13" r="3"/>
+        </svg>
+        <span>Ambil Foto / Pilih File</span>
+        <input type="file" id="photo" accept="image/*" capture="environment" aria-label="Pilih foto bukti piket">
       </div>
 
-      <div id="preview" style="display:none; margin-top:16px;">
-        <p style="margin-bottom:8px; font-size:0.875rem;">File terpilih:</p>
-        <div style="font-weight:600;" id="filename"></div>
-        <img id="previewImg" style="width:100%; border-radius:12px; margin-top:8px; display:none;">
+      <div id="preview" class="upload-preview" hidden>
+        <div class="filename" id="filename"></div>
+        <img id="previewImg" alt="Pratinjau bukti piket" hidden>
       </div>
 
-      <button onclick="submit()">Kirim Bukti</button>
+      <div class="actions">
+        <button class="btn btn-primary btn-block" id="submitBtn">Kirim Bukti</button>
+      </div>
     </div>
 
-    <h3>Riwayat & Jadwal</h3>
-    <div id="scheduleList">
-      <p style="text-align:center;">Memuat jadwal...</p>
-    </div>
+    <section>
+      <h2 class="section-title">Riwayat &amp; Jadwal</h2>
+      <div id="scheduleList" style="margin-top:16px;">
+        <div class="empty-state">Memuat jadwal...</div>
+      </div>
+    </section>
+  </main>
 
-    <button class="secondary" onclick="logoutPage()" style="margin-top:auto;">Keluar</button>
-    <footer>RecisCare — Sistem Piket Sekolah • Portfolio Demo</footer>
-  </div>
+  <footer>RecisCare — Sistem Piket Sekolah • Portfolio Demo</footer>
 
   <script src="../demo/demo-data.js"></script>
   <script src="../assets/js/demo-store.js"></script>
-  <script>
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark');
-      const isDark = document.body.classList.contains('dark');
-      DemoStore.settings.setTheme(isDark ? 'dark' : 'light');
-      updateToggleButton();
-    }
-
-    function updateToggleButton() {
-      const btn = document.querySelector('.dark-mode-toggle');
-      btn.innerHTML = document.body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
-    }
-
-    let user = null;
-
-    function init() {
-      const activeUser = checkAuth('student');
-      if (!activeUser) return;
-      user = activeUser;
-      document.getElementById('userName').innerText = user.name || user.email.split('@')[0];
-      document.getElementById('userClass').innerText = user.class || 'Kelas Tidak Ada';
-      document.getElementById('piketDay').innerText = user.piket_day || '-';
-      loadScheduleAndWarnings();
-    }
-
-    function loadScheduleAndWarnings() {
-      const history = DemoStore.attendance.getAll().filter((entry) => entry.user_id === user.id);
-      const targetDay = user.piket_day;
-      const dayMap = { 'Minggu': 0, 'Senin': 1, 'Selasa': 2, 'Rabu': 3, 'Kamis': 4, 'Jumat': 5, 'Sabtu': 6 };
-      const targetIndex = dayMap[targetDay];
-      if (targetIndex === undefined) return;
-
-      const list = [];
-      let warnings = 0;
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      for (let i = 0; i < 5; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - (i * 7));
-        const currentDay = d.getDay();
-        const diff = targetIndex - currentDay;
-        d.setDate(d.getDate() + diff);
-        d.setHours(0, 0, 0, 0);
-
-        const match = history.find((entry) => new Date(entry.created_at).toDateString() === d.toDateString());
-        let status = 'missed';
-        if (match) {
-          status = match.status;
-        } else if (d.getTime() === now.getTime()) {
-          status = 'upcoming';
-        }
-        if (status === 'missed' || status === 'absent') warnings++;
-        list.push({ date: d, status, match });
-      }
-
-      const warningEl = document.getElementById('warningCount');
-      warningEl.innerText = `${warnings}/3`;
-      if (warnings >= 3) warningEl.style.color = '#f87171';
-
-      const html = list.map((item) => {
-        const dateStr = item.date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        let badgeClass = '';
-        let label = '';
-        switch (item.status) {
-          case 'present': badgeClass = 'present'; label = 'Hadir'; break;
-          case 'absent': badgeClass = 'absent'; label = 'Ditolak'; break;
-          case 'pending': badgeClass = 'pending'; label = 'Menunggu'; break;
-          case 'missed': badgeClass = 'missed'; label = 'Terlewat'; break;
-          case 'upcoming': badgeClass = 'pending'; label = 'Jadwal Hari Ini'; break;
-        }
-        return `<div class="card" style="padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;"><div><div style="font-weight:600;">${dateStr}</div>${item.match && item.match.note ? `<small style="color:var(--danger-text)">Output Guru: ${item.match.note}</small>` : ''}</div><span class="badge ${badgeClass}">${label}</span></div>`;
-      }).join('');
-
-      document.getElementById('scheduleList').innerHTML = html;
-    }
-
-    function previewFile() {
-      const file = document.getElementById('photo').files[0];
-      if (file) {
-        document.getElementById('preview').style.display = 'block';
-        document.getElementById('filename').innerText = file.name;
-        const img = document.getElementById('previewImg');
-        img.style.display = 'block';
-        img.src = URL.createObjectURL(file);
-      }
-    }
-
-    function submit() {
-      const fileInput = document.getElementById('photo');
-      if (!fileInput.files[0]) return alert('Pilih foto terlebih dahulu!');
-      const btn = document.querySelector('button[onclick="submit()"]');
-      btn.innerText = 'Mengirim...';
-      btn.disabled = true;
-      DemoStore.attendance.markPresent(user.id, { status: 'pending', photo_name: fileInput.files[0].name });
-      alert('Laporan piket berhasil dikirim!');
-      btn.innerText = 'Kirim Bukti';
-      btn.disabled = false;
-      loadScheduleAndWarnings();
-    }
-
-    function logoutPage() {
-      logout();
-    }
-
-    applyTheme();
-    init();
-  </script>
   <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/pages/student.js"></script>
 </body>
 
 </html>

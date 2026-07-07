@@ -10,13 +10,16 @@
 
 (() => {
   /**
-   * Calculate an ISO date offset from today.
-   * @param {number} days - Number of days to offset (negative = past)
+   * Calculate the ISO date of a past weekday, so seeded attendance
+   * always lands on a student's scheduled duty day.
+   * @param {number} dayIndex - Weekday index (0 = Minggu ... 6 = Sabtu)
+   * @param {number} weeksAgo - How many weeks back (1 = most recent past week)
    * @returns {string} ISO 8601 date string
    */
-  function getOffsetDate(days) {
+  function getPastWeekday(dayIndex, weeksAgo) {
     const date = new Date();
-    date.setDate(date.getDate() + days);
+    date.setDate(date.getDate() - weeksAgo * 7 + (dayIndex - date.getDay()));
+    date.setHours(8, 0, 0, 0);
     return date.toISOString();
   }
 
@@ -95,12 +98,13 @@
       { id: 'sched-6', day: 'Senin', class: 'XII C', duty: 'Membersihkan perpustakaan', time: '07:00' }
     ];
 
+    // Weekday indexes: Kamis = 4 (student-a), Jumat = 5 (student-b)
     const attendance = [
-      { id: 'att-1', user_id: 'student-a', created_at: getOffsetDate(-14), status: 'present', note: 'Tepat waktu', photo_name: 'foto-1.jpg' },
-      { id: 'att-2', user_id: 'student-a', created_at: getOffsetDate(-7), status: 'absent', note: 'Tidak hadir', photo_name: 'foto-2.jpg' },
-      { id: 'att-3', user_id: 'student-a', created_at: getOffsetDate(-3), status: 'pending', note: '', photo_name: 'foto-3.jpg' },
-      { id: 'att-4', user_id: 'student-b', created_at: getOffsetDate(-10), status: 'present', note: 'Selesai', photo_name: 'foto-4.jpg' },
-      { id: 'att-5', user_id: 'student-b', created_at: getOffsetDate(-5), status: 'present', note: 'Sangat baik', photo_name: 'foto-5.jpg' }
+      { id: 'att-1', user_id: 'student-a', created_at: getPastWeekday(4, 3), status: 'present', note: 'Tepat waktu', photo_name: 'foto-1.jpg' },
+      { id: 'att-2', user_id: 'student-a', created_at: getPastWeekday(4, 2), status: 'absent', note: 'Tidak hadir', photo_name: 'foto-2.jpg' },
+      { id: 'att-3', user_id: 'student-a', created_at: getPastWeekday(4, 1), status: 'pending', note: '', photo_name: 'foto-3.jpg' },
+      { id: 'att-4', user_id: 'student-b', created_at: getPastWeekday(5, 2), status: 'present', note: 'Selesai', photo_name: 'foto-4.jpg' },
+      { id: 'att-5', user_id: 'student-b', created_at: getPastWeekday(5, 1), status: 'present', note: 'Sangat baik', photo_name: 'foto-5.jpg' }
     ];
 
     return { users, schedule, attendance };
